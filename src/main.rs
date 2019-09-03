@@ -9,7 +9,7 @@ use std::sync::{Arc, Mutex};
 
 struct State {
     current_index: Option<usize>,
-    images: Option<Vec<String>>,
+    images: Vec<String>,
 }
 
 fn build_ui(application: &Application, state: Arc<Mutex<State>>) {
@@ -23,23 +23,47 @@ fn build_ui(application: &Application, state: Arc<Mutex<State>>) {
         window.add(&grid);
 
         let image_panel = Image::new();
-        let image_panel_weak = image_panel.downgrade();
         grid.attach(&image_panel, 0, 0, 1, 1);
 
         let left_button = Button::new_with_label("left");
-        left_button.connect_clicked(|_| {
-            println!("Clicked!");
+        let left_button_state = state.clone();
+        let image_panel_weak = image_panel.downgrade();
+        left_button.connect_clicked(move |_| {
+            let image_panel = image_panel_weak
+                .upgrade()
+                .expect("unable to upgrade image panel reference");
+            let mut locked_state = left_button_state.lock().expect("unable to get mutex lock");
+
+            if let Some(current_index) = locked_state.current_index {
+                if current_index > 0 {
+                    locked_state.current_index = Some(current_index - 1);
+                    update_image_panel(&image_panel, &locked_state);
+                }
+            }
         });
         grid.attach(&left_button, 0, 1, 1, 1);
 
         let right_button = Button::new_with_label("right");
-        right_button.connect_clicked(|_| {
-            //TODO:
+        let right_button_state = state.clone();
+        let image_panel_weak = image_panel.downgrade();
+        right_button.connect_clicked(move |_| {
+            let image_panel = image_panel_weak
+                .upgrade()
+                .expect("unable to upgrade image panel reference");
+            let mut locked_state = right_button_state.lock().expect("unable to get mutex lock");
+
+            if let Some(current_index) = locked_state.current_index {
+                if current_index < locked_state.images.len() - 1 {
+                    locked_state.current_index = Some(current_index + 1);
+                    update_image_panel(&image_panel, &locked_state);
+                }
+            }
         });
         grid.attach(&right_button, 1, 1, 1, 1);
 
         let select_folder_button = Button::new_with_label("select folder");
         let select_folder_button_state = state.clone();
+        let image_panel_weak = image_panel.downgrade();
         select_folder_button.connect_clicked(move |_| {
             let window = window_weak
                 .upgrade()
@@ -66,6 +90,7 @@ fn build_ui(application: &Application, state: Arc<Mutex<State>>) {
                     .expect("unable to get mutex lock");
                 locked_state.current_index = Some(0);
                 locked_state.images = get_images_from_dir(&folder);
+                update_image_panel(&image_panel, &locked_state);
             }
 
             folder_selector.destroy();
@@ -76,8 +101,8 @@ fn build_ui(application: &Application, state: Arc<Mutex<State>>) {
     });
 }
 
-fn get_images_from_dir(dir: &PathBuf) -> Option<Vec<String>> {
-    let mut result = None;
+fn get_images_from_dir(dir: &PathBuf) -> Vec<String> {
+    let mut result = Vec::new();
 
     for file in glob(&format!(
         "{}/*.png",
@@ -87,7 +112,11 @@ fn get_images_from_dir(dir: &PathBuf) -> Option<Vec<String>> {
     {
         match file {
             Ok(path) => {
-                dbg!(path);
+                result.push(
+                    path.to_str()
+                        .expect("unable to cast PathBuf to str")
+                        .to_owned(),
+                );
             }
             Err(error) => {
                 println!("{}", error);
@@ -104,10 +133,17 @@ fn main() {
 
     let state = Arc::new(Mutex::new(State {
         current_index: None,
-        images: None,
+        images: Vec::new(),
     }));
 
     build_ui(&application, state);
 
     application.run(&[]);
+}
+
+fn update_image_panel(image_panel: &Image, state: &State) {
+    if let Some(current_index) = state.current_index {
+        let file_name = state.images.get(current_index).expect("invalid state index");
+    image_panel.set_from_file(file_name);
+    }
 }
