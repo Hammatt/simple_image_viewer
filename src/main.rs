@@ -143,7 +143,10 @@ fn main() {
 
 fn update_image_panel(image_panel: &Image, state: &State) {
     if let Some(current_index) = state.current_index {
-        let file_name = state.images.get(current_index).expect("invalid state index");
-    image_panel.set_from_file(file_name);
+        let file_name = state
+            .images
+            .get(current_index)
+            .expect("invalid state index");
+        image_panel.set_from_file(file_name);
     }
 }
