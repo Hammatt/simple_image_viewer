@@ -82,7 +82,9 @@ fn get_images_from_dir(dir: &PathBuf) -> Option<Vec<String>> {
     for file in glob(&format!(
         "{}/*.png",
         dir.to_str().expect("could not resolve dir as string")
-    )).expect("could not evaluate glob") {
+    ))
+    .expect("could not evaluate glob")
+    {
         match file {
             Ok(path) => {
                 dbg!(path);
