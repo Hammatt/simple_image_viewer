@@ -5,6 +5,8 @@ authors = ["Alexander Hammatt <alexander.hammatt@protonmail.com>"]
 edition = "2018"
 
 [dependencies]
+glob = "0.3"
+
 [dependencies.gtk]
 version = "0.7.0"
 features = ["v3_16"]
